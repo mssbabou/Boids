@@ -1,0 +1,67 @@
+# Compiled object files and executables
+*.o
+*.obj
+*.lo
+*.la
+*.al
+*.libs
+*.a
+*.lib
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+*.i
+*.ii
+*.s
+
+# CMake build files
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+/compile_commands.json
+
+# Build directories (common names)
+build/
+build-windows/
+bin/
+lib/
+Debug/
+Release/
+x64/
+x86/
+
+# IDE and editor specific files
+*.vcxproj*
+*.sln
+*.DS_Store
+*.idea/
+*.vscode/
+*.clangd
+*.clang-tidy
+*.clang-format
+*.ninja
+*.swp
+*.swo
+*.user
+*.cproject
+*.project
+*.settings/
+
+# Backup and generated files
+*.bak
+*.log
+*.tmp
+*.d
+
+# Test output
+tests/output/
+tests/temp/
+
+# Generated documentation
+/docs/html/
+/docs/latex/
