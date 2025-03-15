@@ -6,8 +6,10 @@
 #include <random>
 #include <chrono>
 
+#include "Vec2.h"
 #include "Boid.h"
 #include "Collider.h"
+#include "Physics2D.h"
 
 const int windowWidth = 800;
 const int windowHeight = 800;
@@ -17,7 +19,7 @@ const int initialBoidCount = 300;
 
 const float boidSize = 15;
 const float boidViewRange = 60.0f;
-const float boidViewFOV = 200.0f;
+const float boidViewFOV = 270.0f;
 
 const float boidMaxSpeed = 4.0f;
 const float boidAcceleration = 0.2f;
@@ -25,6 +27,7 @@ const float boidAcceleration = 0.2f;
 const float boidSeparationStrength = 6.0f;
 const float boidAlignmentStrength = 0.1f;
 const float boidCohesionStrength = 0.2f;
+const float boidObstacleAvoidStrength = 0.2f;
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
@@ -47,10 +50,12 @@ void DrawBoids()
 
 void DrawColliders()
 {
-    SDL_SetRenderDrawColorFloat(renderer, 1, 0, 0, SDL_ALPHA_OPAQUE_FLOAT);
+    SDL_SetRenderDrawColorFloat(renderer, 1, 0.3, 0, SDL_ALPHA_OPAQUE_FLOAT);
     for (Collider &collider : Colliders)
     {
-        for (int i = 0; i < collider.Points.size()-1; i++)
+        if (collider.IsInvisible) continue;
+
+        for (size_t i = 0; i < collider.Points.size()-1; i++)
         {
             Vec2 p0 = collider.Points[i];
             Vec2 p1 = collider.Points[i+1];
@@ -63,6 +68,24 @@ void DrawColliders()
             Vec2 p1 = collider.Points.back();
             SDL_RenderLine(renderer, p0.x, p0.y, p1.x, p1.y);
         }
+    }
+}
+
+void DrawRay(RayHit& hitInfo)
+{
+    SDL_SetRenderDrawColorFloat(renderer, 1, 0, 0, SDL_ALPHA_OPAQUE_FLOAT);
+
+    if (hitInfo.hit)
+    {
+        SDL_RenderLine(renderer, hitInfo.ray.origin.x, hitInfo.ray.origin.y, hitInfo.point.x, hitInfo.point.y);
+    }
+}
+
+void DrawRays(vector<RayHit>& hitInfos)
+{
+    for (RayHit &hit : hitInfos)
+    {
+        DrawRay(hit);
     }
 }
 
@@ -189,6 +212,12 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
     CreateRandomBoids(initialBoidCount);
+
+    Collider worldBorder = Collider::Rectangle(0, 0, windowWidth-1, windowHeight-1);
+    worldBorder.IsHollow = true;
+    worldBorder.IsInvisible = true;
+    
+    Colliders.push_back(worldBorder);
     Colliders.push_back(Collider::Rectangle(300, 300, 50, 50));
 
     return SDL_APP_CONTINUE;
@@ -211,6 +240,18 @@ void FixedUpdate()
     UpdateBoids();
     DrawBoids();
     DrawColliders();
+
+    /*
+    Vec2 mPos;
+    SDL_GetMouseState(&mPos.x, &mPos.y);
+    Vec2 origin = Vec2(windowWidth/2, windowHeight/2);
+    Vec2 direction = Vec2(mPos.x - origin.x, mPos.y - origin.y);
+
+    vector<Ray> rays = Physics2D::CreateFOVRays(origin, direction, 90, 9999, 8);
+    vector<RayHit> hits;
+    Physics2D::RaycastMulti(Colliders, rays, hits);
+    DrawRays(hits);
+    */
 
     SDL_RenderPresent(renderer);
 }

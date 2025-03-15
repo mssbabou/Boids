@@ -40,6 +40,11 @@ float Vec2::Dot(Vec2 a, Vec2 b)
     return a.x * b.x + a.y * b.y;
 }
 
+float Vec2::Cross(Vec2 a, Vec2 b)
+{
+    return a.x * b.y - a.y * b.x;
+}
+
 float Vec2::Distance(Vec2 a, Vec2 b)
 {
     Vec2 v = Vec2(b.x - a.x, b.y - a.y);

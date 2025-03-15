@@ -21,6 +21,7 @@ class Vec2
         void SetLength(float l);
         
         static float Dot(Vec2 a, Vec2 b);
+        static float Cross(Vec2 a, Vec2 b);
         static float Distance(Vec2 a, Vec2 b);
         static float SqrDistance(Vec2 a, Vec2 b);
         static float AngleBetween(Vec2 a, Vec2 b);
