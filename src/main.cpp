@@ -2,28 +2,29 @@
 #include <SDL3/SDL.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3/SDL_main.h>
+#include <cmath>
 #include <random>
+#include <chrono>
 
 #include "Boid.h"
-#include "Collider.h";
-
+#include "Collider.h"
 
 const int windowWidth = 800;
 const int windowHeight = 800;
 
 const int tickRate = 60;
-const int initialBoidCount = 200;
+const int initialBoidCount = 300;
 
 const float boidSize = 15;
-const float boidViewRange = 30.0f;
+const float boidViewRange = 60.0f;
 const float boidViewFOV = 200.0f;
 
 const float boidMaxSpeed = 4.0f;
 const float boidAcceleration = 0.2f;
 
-const float boidSeparationStrength = 3.5f;
-const float boidAlignmentStrength = 0.8f;
-const float boidCohesionStrength = 4.0f;
+const float boidSeparationStrength = 6.0f;
+const float boidAlignmentStrength = 0.1f;
+const float boidCohesionStrength = 0.2f;
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
@@ -96,7 +97,6 @@ void UpdateBoid(Boid &boid)
     Vec2 cohesionForce;
     int neighborCount = 0;
 
-    // Accumulate forces from neighboring boids
     for (Boid &other : Boids)
     {
         if (boid == other)
@@ -111,11 +111,8 @@ void UpdateBoid(Boid &boid)
             if (angle <= boidViewFOV / 2.0f)
             {
                 separationForce = separationForce + (diff.Normalized() / distance);
-
                 alignmentForce = alignmentForce + other.velocity;
-
                 cohesionForce = cohesionForce + other.position;
-
                 neighborCount++;
             }
         }
@@ -125,14 +122,10 @@ void UpdateBoid(Boid &boid)
     {
         separationForce = separationForce / static_cast<float>(neighborCount);
         alignmentForce = alignmentForce / static_cast<float>(neighborCount);
-
         cohesionForce = (cohesionForce / static_cast<float>(neighborCount)) - boid.position;
 
-        if (separationForce.Magnitude() > 0)
-        {
-            separationForce.Normalize();
-            separationForce = separationForce * boidSeparationStrength;
-        }
+        separationForce = separationForce * boidSeparationStrength;
+
         if (alignmentForce.Magnitude() > 0)
         {
             alignmentForce.Normalize();
@@ -146,7 +139,6 @@ void UpdateBoid(Boid &boid)
     }
 
     Vec2 acceleration = separationForce + alignmentForce + cohesionForce;
-
     boid.velocity = boid.velocity + acceleration * boidAcceleration;
 
     if (boid.velocity.Magnitude() > boidMaxSpeed)
@@ -154,6 +146,7 @@ void UpdateBoid(Boid &boid)
 
     boid.position = boid.position + boid.velocity;
 
+    // Wrap around screen boundaries
     if (boid.position.x < 0) boid.position.x = windowWidth;
     else if (boid.position.x > windowWidth) boid.position.x = 0;
 
