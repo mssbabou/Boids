@@ -1,10 +1,15 @@
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_opengl.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3/SDL_main.h>
 #include <cmath>
 #include <random>
 #include <chrono>
+
+#include "imgui.h"
+#include "imgui_impl_sdl3.h"
+#include "imgui_impl_opengl3.h"
 
 #include "Vec2.h"
 #include "Boid.h"
@@ -32,6 +37,7 @@ const float boidObstacleAvoidStrength = 5.0f;
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
 static SDL_Texture *boidTexture = NULL;
+static SDL_GLContext gl_context = NULL;
 
 using namespace std;
 
@@ -231,8 +237,6 @@ void UpdateBoid(Boid &boid)
     else if (boid.position.y > windowHeight) boid.position.y = 0;
 }
 
-
-
 void UpdateBoids()
 {
     for (Boid &boid : Boids)
@@ -251,11 +255,28 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
 
-    if (!SDL_CreateWindowAndRenderer("Boids", windowWidth, windowHeight, SDL_WINDOW_HIGH_PIXEL_DENSITY, &window, &renderer))
+    if (!SDL_CreateWindowAndRenderer("Boids", windowWidth, windowHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY, &window, &renderer))
     {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+
+    gl_context = SDL_GL_CreateContext(window);
+    if (!gl_context)
+    {
+        SDL_Log("Error creating OpenGL context: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    (void)io;
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
+    ImGui_ImplOpenGL3_Init("#version 130");
+
     SDL_SetRenderLogicalPresentation(renderer, windowWidth, windowHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
     boidTexture = IMG_LoadTexture(renderer, "assets/cursor-pointing-up.svg");
@@ -285,30 +306,45 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     {
         return SDL_APP_SUCCESS;
     }
+
     return SDL_APP_CONTINUE;
 }
 
 void FixedUpdate()
 {
-    SDL_SetRenderDrawColorFloat(renderer, 1, 1, 1, SDL_ALPHA_OPAQUE_FLOAT);
+    // Make sure the OpenGL context is current
+    SDL_GL_MakeCurrent(window, gl_context);
+
+    int display_w, display_h;
+    SDL_GetWindowSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+
+    SDL_SetRenderDrawColorFloat(renderer, 1, 1, 1, 0);
     SDL_RenderClear(renderer);
 
+    // Render your game content using OpenGL commands
+    // For example:
     UpdateBoids();
     DrawBoids();
     DrawColliders();
 
-    /*
-    Vec2 mPos;
-    SDL_GetMouseState(&mPos.x, &mPos.y);
-    Vec2 origin = Vec2(windowWidth/2, windowHeight/2);
-    Vec2 direction = Vec2(mPos.x - origin.x, mPos.y - origin.y);
-
-    vector<Ray> rays = Physics2D::CreateFOVRays(origin, direction, 90, 9999, 8);
-    vector<RayHit> hits;
-    Physics2D::RaycastMulti(Colliders, rays, hits);
-    DrawRays(hits);
-    */
-
+    
+    // Begin ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+    
+    // Create the control panel
+    ImGui::Begin("Control Panel");
+    ImGui::Text("Adjust your variables:");
+    ImGui::End();
+    
+    // Render ImGui on top of your scene
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    
+    // Swap buffers to display everything
+    SDL_GL_SwapWindow(window);
     SDL_RenderPresent(renderer);
 }
 
@@ -325,5 +361,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
 void SDL_AppQuit(void *appstate, SDL_AppResult result)
 {
-
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 }

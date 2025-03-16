@@ -14,13 +14,31 @@ endif()
 find_package(SDL3 REQUIRED CONFIG)
 find_package(SDL3_image REQUIRED CONFIG)
 
+# Collect your project sources from src/
 file(GLOB_RECURSE SOURCES "src/*.cpp")
-add_executable(Boids ${SOURCES})
+
+# Collect ImGui sources from the external folder
+file(GLOB IMGUI_SOURCES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends/imgui_impl_sdl3.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends/imgui_impl_opengl3.cpp"
+)
+
+# Add executable including both your sources and ImGui files
+add_executable(Boids ${SOURCES} ${IMGUI_SOURCES})
+
+# Add include directories for ImGui and its backends
+target_include_directories(Boids PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui"
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/imgui/backends"
+)
+
+target_link_libraries(Boids PRIVATE opengl32)
 
 target_link_libraries(Boids PRIVATE SDL3::SDL3 SDL3_image::SDL3_image)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(Boids PRIVATE -Wall -Wextra -Wpedantic -O2)
+    target_compile_options(Boids PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 if (MINGW)

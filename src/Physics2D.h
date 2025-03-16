@@ -10,7 +10,7 @@ struct Ray
     Vec2 origin;
     Vec2 direction;
     float maxDistance;
-} typedef;
+};
 
 struct RayHit
 {
@@ -20,7 +20,7 @@ struct RayHit
     float distance;
     const Collider* collider;
 
-} typedef;
+};
 
 class Physics2D
 {
