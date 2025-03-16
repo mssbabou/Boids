@@ -73,6 +73,11 @@ float Vec2::AngleBetween(Vec2 a, Vec2 b)
     return std::acos(cosTheta);
 }
 
+Vec2 Vec2::operator-() const
+{
+    return Vec2(-x, -y);
+}
+
 Vec2 Vec2::operator+(const Vec2& other) const {
     return Vec2(x + other.x, y + other.y);
 }

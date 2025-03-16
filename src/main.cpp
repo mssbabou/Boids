@@ -15,7 +15,7 @@ const int windowWidth = 800;
 const int windowHeight = 800;
 
 const int tickRate = 60;
-const int initialBoidCount = 300;
+const int initialBoidCount = 200;
 
 const float boidSize = 15;
 const float boidViewRange = 60.0f;
@@ -24,10 +24,10 @@ const float boidViewFOV = 270.0f;
 const float boidMaxSpeed = 4.0f;
 const float boidAcceleration = 0.2f;
 
-const float boidSeparationStrength = 6.0f;
-const float boidAlignmentStrength = 0.1f;
-const float boidCohesionStrength = 0.2f;
-const float boidObstacleAvoidStrength = 0.2f;
+const float boidSeparationStrength = 12.0f;
+const float boidAlignmentStrength = 0.2f;
+const float boidCohesionStrength = 0.4f;
+const float boidObstacleAvoidStrength = 6.0f;
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
@@ -118,8 +118,10 @@ void UpdateBoid(Boid &boid)
     Vec2 separationForce;
     Vec2 alignmentForce;
     Vec2 cohesionForce;
+    Vec2 obstacleForce;
     int neighborCount = 0;
 
+    // Process neighbors for separation, alignment, and cohesion forces
     for (Boid &other : Boids)
     {
         if (boid == other)
@@ -147,6 +149,7 @@ void UpdateBoid(Boid &boid)
         alignmentForce = alignmentForce / static_cast<float>(neighborCount);
         cohesionForce = (cohesionForce / static_cast<float>(neighborCount)) - boid.position;
 
+        // For separation we keep the distance effect
         separationForce = separationForce * boidSeparationStrength;
 
         if (alignmentForce.Magnitude() > 0)
@@ -161,21 +164,74 @@ void UpdateBoid(Boid &boid)
         }
     }
 
-    Vec2 acceleration = separationForce + alignmentForce + cohesionForce;
-    boid.velocity = boid.velocity + acceleration * boidAcceleration;
+    // Process obstacle avoidance via raycasting
+    std::vector<RayHit> hits;
+    // Using a maxDistance (e.g., 200) and a ray count (e.g., 8) for your FOV rays
+    Physics2D::RaycastMulti(Colliders, Physics2D::CreateFOVRays(boid.position, boid.velocity, 180, 200, 8), hits);
+    //DrawRays(hits);
 
+    int hitCount = 0;
+    for (RayHit &hit : hits)
+    {
+        if (!hit.hit)
+            continue;
+
+        // Determine how close the obstacle is relative to the ray's max distance.
+        float t = hit.distance / hit.ray.maxDistance;  // 0 when very close, 1 when at max distance
+        // Use a quadratic falloff so that the avoidance force increases more sharply as you get closer.
+        float falloff = (1.0f - t) * (1.0f - t);
+
+        // Calculate an avoidance direction that steers away from the obstacle.
+        Vec2 avoidanceDir = boid.position - hit.point;
+        if (avoidanceDir.Magnitude() > 1e-6f)
+            avoidanceDir.Normalize();
+
+        // Add the weighted avoidance direction.
+        obstacleForce = obstacleForce + (avoidanceDir * falloff);
+        hitCount++;
+    }
+
+    if (hitCount > 0)
+    {
+        obstacleForce = obstacleForce / static_cast<float>(hitCount);
+        obstacleForce = obstacleForce * boidObstacleAvoidStrength;
+    }
+
+    // If the computed obstacle force is nearly zero, pick a random avoidance direction.
+    // This helps when all rays return too-similar (or weak) data, so the boid can choose a direction.
+    if (obstacleForce.Magnitude() < 1e-3f)
+    {
+        float randomAngle = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 2.0f * M_PI;
+        obstacleForce = Vec2(std::cos(randomAngle), std::sin(randomAngle)) * boidObstacleAvoidStrength;
+    }
+
+    // Compute total acceleration from all steering forces.
+    Vec2 acceleration = separationForce + alignmentForce + cohesionForce + obstacleForce;
+
+    // Add constant forward acceleration if below max speed.
+    const float boidForwardAccel = 0.5f;  // Adjust as needed.
+    float currentSpeed = boid.velocity.Magnitude();
+    if (currentSpeed > 1e-6f && currentSpeed < boidMaxSpeed)
+    {
+        acceleration = acceleration + boid.velocity.Normalized() * boidForwardAccel;
+    }
+
+    // Update velocity and clamp to boidMaxSpeed.
+    boid.velocity = boid.velocity + acceleration * boidAcceleration;
     if (boid.velocity.Magnitude() > boidMaxSpeed)
         boid.velocity.SetLength(boidMaxSpeed);
 
     boid.position = boid.position + boid.velocity;
 
-    // Wrap around screen boundaries
+    // Wrap around screen boundaries.
     if (boid.position.x < 0) boid.position.x = windowWidth;
     else if (boid.position.x > windowWidth) boid.position.x = 0;
 
     if (boid.position.y < 0) boid.position.y = windowHeight;
     else if (boid.position.y > windowHeight) boid.position.y = 0;
 }
+
+
 
 void UpdateBoids()
 {

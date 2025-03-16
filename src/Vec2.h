@@ -26,6 +26,8 @@ class Vec2
         static float SqrDistance(Vec2 a, Vec2 b);
         static float AngleBetween(Vec2 a, Vec2 b);
         
+        Vec2 operator-() const;
+
         Vec2 operator+(const Vec2& other) const;
         Vec2 operator-(const Vec2& other) const;
         Vec2 operator+=(const Vec2& other) const;
