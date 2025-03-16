@@ -27,7 +27,7 @@ const float boidAcceleration = 0.2f;
 const float boidSeparationStrength = 12.0f;
 const float boidAlignmentStrength = 0.2f;
 const float boidCohesionStrength = 0.4f;
-const float boidObstacleAvoidStrength = 6.0f;
+const float boidObstacleAvoidStrength = 5.0f;
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
